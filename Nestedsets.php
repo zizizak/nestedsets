@@ -107,33 +107,33 @@ class NestedSets
 		->where($this->primary_key, $filter($data['parent_id']));
 		$parent_node = $this->db->get($this->db_table)->row_array();
 
-		// does the parent has any children?
-		if ($this->has_children($parent_node)) {
-			// appended the new node
-			$data[$this->left_col] = intval($parent_node[$this->right_col]);
-			$data[$this->right_col] = $parent_node[$this->right_col] + 1;
-		} else {
-			// add new node as 1st child
-			$data[$this->left_col] = $parent_node[$this->left_col] + 1;
-			$data[$this->right_col] = $parent_node[$this->left_col] + 2;
-		}
-
 		// increment (+2) the left and right values of all nodes
 		// to the right of the new node
 		$left = $this->left_col;
 		$right = $this->right_col;
 
-		$this->db->set($this->right_col, $right . '+' . 2 , false)
-		->where($this->right_col . ' >', $parent_node[$this->left_col])
-		->update($this->db_table);
-
 		$this->db->set($this->left_col, $left . '+' . 2 , false)
 		->where($this->left_col . ' >', $parent_node[$this->left_col])
 		->update($this->db_table);
 
+		$this->db->set($this->right_col, $right . '+' . 2 , false)
+		->where($this->right_col . ' >', $parent_node[$this->left_col])
+		->update($this->db_table);
+
 		// add the new node
+		$data[$this->left_col] = $parent_node[$this->left_col] + 1;
+		$data[$this->right_col] = $parent_node[$this->left_col] + 2;
+	
 		$this->db->insert($this->db_table, $data);
 		return $this->db->insert_id();
+	}
+
+	/**
+	* Truncates the table. 
+	* NOTE! use with extreme caution!
+	*/
+	public function truncate(){
+		return $this->db->truncate($this->db_table);
 	}
 
 	/* --------------------------------------------------------------
