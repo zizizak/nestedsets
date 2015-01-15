@@ -10,6 +10,10 @@ class NestedSets
 {
 	/**
 	* Hold the CI and db instance
+	*
+	* @var 	object	
+	* @var 	object	
+	* @access	private
 	*/
 	private $CI;
 	private $db;
@@ -17,14 +21,15 @@ class NestedSets
 	/**
 	* The main columns for nested sets
 	*
-	* $db_table: the name of the table
-	* $primary_key: the primary key of the table
-	* $primary_filter: filter the primary key
+	* @access	public
+	* @var 	$db_table: the name of the table
+	* @var 	$primary_key: the primary key of the table
+	* @var 	$primary_filter: filter the primary key
 	* 					- intval for int keys 
 	* 					- htmlentities for string keys
-	* $parent: the parent node
-	* $left_col: the name of the left column
-	* $right_col: the name of the right column
+	* @var 	$parent: the parent node
+	* @var 	$left_col: the name of the left column
+	* @var 	$right_col: the name of the right column
 	*/
 	public $db_table;
 	public $primary_key;
