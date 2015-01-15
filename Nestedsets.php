@@ -134,6 +134,80 @@ class NestedSets
 	}
 
 	/**
+	* Remove all nodes from the tree, 
+	* i.e delete all records from table 
+	*/
+	public function delete_tree(){
+		return $this->db->empty_table($this->db_table);
+	}
+
+	/**
+	* Delete a node from the table/tree without
+	* deleting children
+	*/
+	public function delete_node($node){
+
+		// find the left and right values of the node to delete
+		$filter = $this->primary_filter;
+		$this->db->select($this->left_col .', ' . $this->right_col)
+		->select($this->right_col . ' - ' . $this->left_col . '+'. 1 .' AS width', false)
+		->where($this->primary_key, $filter($node));
+		$node = $this->db->get($this->db_table)->row_array();
+
+		// r.i.p node ...
+		$this->db->where($this->left_col, (int)$node[$this->left_col])->delete($this->db_table);
+
+		// bring any orphan children to the level of their parent node
+
+		$left = $this->left_col;
+		$right = $this->right_col;
+
+		// POSSIBLE ISSUE: 
+		// the parent_id of the children should be set 
+		// equal to the one that their parent had
+		$this->db->set($this->right_col, $rigth . '-' . 1, false)
+		->set($this->left_col, $left . '-' . 1, false)
+		->where($this->left_col . ' BETWEEN ' . (int)$node[$this->left_col] . ' AND ' . (int)$node[$this->right_col], null, false)
+		->update($this->db_table);
+
+		$this->db->set($this->right_col, $rigth . '-' . 2, false)
+		->where($this->right_col . ' >', (int)$node[$this->right_col])
+		->update($this->db_table);
+
+		$this->db->set($this->left_col, $left . '-' . 2, false)
+		->where($this->left_col . ' >', (int)$node[$this->right_col])
+		->update($this->db_table);
+	}
+
+	/**
+	* Delete a node from the table/tree and any children
+	*/
+	public function delete_with_children($node){
+
+		// find the left and right values of the node to delete
+		$filter = $this->primary_filter;
+		$this->db->select($this->left_col .', ' . $this->right_col)
+		->select($this->right_col . ' - ' . $this->left_col . ' + 1 AS width', false)
+		->where($this->primary_key, $filter($node));
+		$node = $this->db->get($this->db_table)->row_array();
+
+		// delete the node and its children
+		$this->db->where($this->left_col . ' BETWEEN ' . (int)$node[$this->left_col] . ' AND ' . (int)$node[$this->right_col], null, false);
+		$this->db->delete($this->db_table);
+
+		$left = $this->left_col;
+		$right = $this->right_col;
+
+		$this->db->set($this->right_col, $right . ' + ' . (int)$node['width'], false)
+		->where($this->right_col . ' >', (int)$node[$this->right_col])
+		->update($this->db_table);
+
+		$this->db->set($this->left_col, $left . ' + ' . (int)$node['width'], false)
+		->where($this->left_col . ' >', (int)$node[$this->right_col])
+		->update($this->db_table);
+	}
+
+	/**
 	* Truncates the table. 
 	* NOTE! use with extreme caution!
 	*/
