@@ -11,9 +11,9 @@ class NestedSets
 	/**
 	* Hold the CI and db instance
 	*
-	* @var 	object	
-	* @var 	object	
-	* @access	private
+	* @access private
+	* @var 	CI instance
+	* @var 	db instance
 	*/
 	private $CI;
 	private $db;
@@ -21,7 +21,7 @@ class NestedSets
 	/**
 	* The main columns for nested sets
 	*
-	* @access	public
+	* @access public
 	* @var 	$db_table: the name of the table
 	* @var 	$primary_key: the primary key of the table
 	* @var 	$primary_filter: filter the primary key
@@ -31,12 +31,12 @@ class NestedSets
 	* @var 	$left_col: the name of the left column
 	* @var 	$right_col: the name of the right column
 	*/
-	public $db_table;
-	public $primary_key;
-	public $primary_filter;
-	public $parent;
-	public $left_col;
-	public $right_col;
+	public $db_table = 'nestedsets';
+	public $primary_key = 'id';
+	public $primary_filter = 'intval';
+	public $parent = 'parent_id';
+	public $left_col = 'lft';
+	public $right_col = 'rgt';
 	
 	function __construct($config = array()){
 		$CI =& get_instance();
@@ -53,12 +53,12 @@ class NestedSets
 	*/
 	public function initialize($config){
 		// set some defaults 
-		$this->db_table = (isset($config['db_table'])) ? $config['db_table'] : 'nestedsets';
-		$this->primary_key = (isset($config['primary_key'])) ? $config['primary_key'] : 'id';
-		$this->primary_filter = (isset($config['primary_filter'])) ? $config['primary_filter'] : 'intval';
-		$this->parent = (isset($config['parent'])) ? $config['parent'] : 'parent_id';
-		$this->left_col = (isset($config['left'])) ? $config['left'] : 'lft';
-		$this->right_col = (isset($config['right'])) ? $config['right'] : 'rgt';
+		$this->db_table = (isset($config['db_table'])) ? $config['db_table'] : $this->db_table;
+		$this->primary_key = (isset($config['primary_key'])) ? $config['primary_key'] : $this->primary_key;
+		$this->primary_filter = (isset($config['primary_filter'])) ? $config['primary_filter'] : $this->primary_filter;
+		$this->parent = (isset($config['parent'])) ? $config['parent'] : $this->parent;
+		$this->left_col = (isset($config['left'])) ? $config['left'] : $this->left_col;
+		$this->right_col = (isset($config['right'])) ? $config['right'] : $this->right_col;
 	}
 
 	/* --------------------------------------------------------------
@@ -149,28 +149,25 @@ class NestedSets
 
 		// find the left and right values of the node to delete
 		$filter = $this->primary_filter;
-		$this->db->select($this->left_col .', ' . $this->right_col)
-		->select($this->right_col . ' - ' . $this->left_col . '+'. 1 .' AS width', false)
+		$this->db->select($this->parent .', ' . $this->left_col .', ' . $this->right_col)
+		->select($this->right_col . '-' . $this->left_col . '+'. 1 .' AS width', false)
 		->where($this->primary_key, $filter($node));
 		$node = $this->db->get($this->db_table)->row_array();
 
 		// r.i.p node ...
 		$this->db->where($this->left_col, (int)$node[$this->left_col])->delete($this->db_table);
 
-		// bring any orphan children to the level of their parent node
-
+		// bring orphans (child nodes) to the same level as their parent node was
 		$left = $this->left_col;
 		$right = $this->right_col;
 
-		// POSSIBLE ISSUE: 
-		// the parent_id of the children should be set 
-		// equal to the one that their parent had
-		$this->db->set($this->right_col, $rigth . '-' . 1, false)
+		$this->db->set($this->right_col, $right . '-' . 1, false)
 		->set($this->left_col, $left . '-' . 1, false)
+		->set($this->parent, (int)$node[$this->parent])
 		->where($this->left_col . ' BETWEEN ' . (int)$node[$this->left_col] . ' AND ' . (int)$node[$this->right_col], null, false)
 		->update($this->db_table);
 
-		$this->db->set($this->right_col, $rigth . '-' . 2, false)
+		$this->db->set($this->right_col, $right . '-' . 2, false)
 		->where($this->right_col . ' >', (int)$node[$this->right_col])
 		->update($this->db_table);
 
